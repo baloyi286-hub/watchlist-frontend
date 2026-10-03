@@ -21,10 +21,193 @@ class _HomePageState extends State<HomePage>{
  void _snack(String m){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}
 }
 
-class TvSettingsView extends StatefulWidget{const TvSettingsView({super.key});@override State<TvSettingsView> createState()=>_TvSettingsViewState();}
-class _TvSettingsViewState extends State<TvSettingsView>{final api=WatchCueApi();bool loading=true,enabled=true,onStart=true,periodic=false,onlyUnwatched=true;int period=180,maxItems=5;String deviceId='living-room-tv';String? error;
- @override void initState(){super.initState();_load();}
- Future<void> _load()async{try{final s=await api.tvSettings();enabled=s['enabled'];onStart=s['notifyOnTvStart'];periodic=s['periodicEnabled'];period=s['periodMinutes'];maxItems=s['maxItems'];onlyUnwatched=s['onlyUnwatched'];deviceId=s['deviceId'];}catch(e){error=e.toString();}if(mounted)setState(()=>loading=false);}
- Future<void> _save()async{try{await api.saveTvSettings({'enabled':enabled,'notifyOnTvStart':onStart,'periodicEnabled':periodic,'periodMinutes':period,'maxItems':maxItems,'onlyUnwatched':onlyUnwatched,'deviceId':deviceId});if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('TV settings saved')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}}
- @override Widget build(BuildContext context){if(loading)return const Center(child:CircularProgressIndicator());if(error!=null)return Center(child:Text(error!));return ListView(padding:const EdgeInsets.all(16),children:[Text('TV reminders',style:Theme.of(context).textTheme.headlineSmall),const SizedBox(height:8),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Enable TV reminders'),value:enabled,onChanged:(v)=>setState(()=>enabled=v)),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('When TV turns on'),subtitle:const Text('TV app calls POST /api/v1/tv/online'),value:onStart,onChanged:enabled?(v)=>setState(()=>onStart=v):null),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Periodic reminders'),value:periodic,onChanged:enabled?(v)=>setState(()=>periodic=v):null),if(periodic)DropdownButtonFormField<int>(value:period,decoration:const InputDecoration(labelText:'Every'),items:const [60,120,180,360,720,1440].map((m)=>DropdownMenuItem<int>(value:m,child:Text(m==60?'1 hour':'${m~/60} hours'))).toList(),onChanged:(v)=>setState(()=>period=v!)),const SizedBox(height:12),DropdownButtonFormField<int>(value:maxItems,decoration:const InputDecoration(labelText:'Maximum items on TV'),items:[3,5,8,10].map((n)=>DropdownMenuItem(value:n,child:Text('$n'))).toList(),onChanged:(v)=>setState(()=>maxItems=v!)),SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Only unwatched items'),value:onlyUnwatched,onChanged:(v)=>setState(()=>onlyUnwatched=v)),TextFormField(initialValue:deviceId,decoration:const InputDecoration(labelText:'TV device ID'),onChanged:(v)=>deviceId=v),const SizedBox(height:16),FilledButton.icon(onPressed:_save,icon:const Icon(Icons.save),label:const Text('Save settings')),const SizedBox(height:8),OutlinedButton.icon(onPressed:()async{try{final sent=await api.sendTvNow();if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(sent?'Sent to TV':'Nothing to send')));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(e.toString())));}},icon:const Icon(Icons.send_to_mobile),label:const Text('Send watchlist to TV now')),const SizedBox(height:12),const Text('TV startup contract:\nPOST /api/v1/tv/online\n{"deviceId":"living-room-tv"}')}]);}
+class TvSettingsView extends StatefulWidget {
+  const TvSettingsView({super.key});
+
+  @override
+  State<TvSettingsView> createState() => _TvSettingsViewState();
+}
+
+class _TvSettingsViewState extends State<TvSettingsView> {
+  final api = WatchCueApi();
+  bool loading = true;
+  bool enabled = true;
+  bool onStart = true;
+  bool periodic = false;
+  bool onlyUnwatched = true;
+  int period = 180;
+  int maxItems = 5;
+  String deviceId = 'living-room-tv';
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final s = await api.tvSettings();
+      enabled = s['enabled'] ?? true;
+      onStart = s['notifyOnTvStart'] ?? true;
+      periodic = s['periodicEnabled'] ?? false;
+      period = s['periodMinutes'] ?? 180;
+      maxItems = s['maxItems'] ?? 5;
+      onlyUnwatched = s['onlyUnwatched'] ?? true;
+      deviceId = s['deviceId'] ?? 'living-room-tv';
+    } catch (e) {
+      error = e.toString();
+    }
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _save() async {
+    try {
+      await api.saveTvSettings({
+        'enabled': enabled,
+        'notifyOnTvStart': onStart,
+        'periodicEnabled': periodic,
+        'periodMinutes': period,
+        'maxItems': maxItems,
+        'onlyUnwatched': onlyUnwatched,
+        'deviceId': deviceId,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('TV settings saved')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendNow() async {
+    try {
+      final sent = await api.sendTvNow();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(sent ? 'Sent to TV' : 'Nothing to send')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (error != null) {
+      return Center(child: Text(error!));
+    }
+
+    final periodItems = <DropdownMenuItem<int>>[
+      for (final minutes in const [60, 120, 180, 360, 720, 1440])
+        DropdownMenuItem<int>(
+          value: minutes,
+          child: Text(minutes == 60 ? '1 hour' : '${minutes ~/ 60} hours'),
+        ),
+    ];
+
+    final maxItemChoices = <DropdownMenuItem<int>>[
+      for (final count in const [3, 5, 8, 10])
+        DropdownMenuItem<int>(
+          value: count,
+          child: Text('$count'),
+        ),
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'TV reminders',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Enable TV reminders'),
+          value: enabled,
+          onChanged: (value) => setState(() => enabled = value),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('When TV turns on'),
+          subtitle: const Text('TV app calls POST /api/v1/tv/online'),
+          value: onStart,
+          onChanged: enabled
+              ? (value) => setState(() => onStart = value)
+              : null,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Periodic reminders'),
+          value: periodic,
+          onChanged: enabled
+              ? (value) => setState(() => periodic = value)
+              : null,
+        ),
+        if (periodic)
+          DropdownButtonFormField<int>(
+            initialValue: period,
+            decoration: const InputDecoration(labelText: 'Every'),
+            items: periodItems,
+            onChanged: (value) {
+              if (value != null) setState(() => period = value);
+            },
+          ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<int>(
+          initialValue: maxItems,
+          decoration: const InputDecoration(labelText: 'Maximum items on TV'),
+          items: maxItemChoices,
+          onChanged: (value) {
+            if (value != null) setState(() => maxItems = value);
+          },
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Only unwatched items'),
+          value: onlyUnwatched,
+          onChanged: (value) => setState(() => onlyUnwatched = value),
+        ),
+        TextFormField(
+          initialValue: deviceId,
+          decoration: const InputDecoration(labelText: 'TV device ID'),
+          onChanged: (value) => deviceId = value,
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: _save,
+          icon: const Icon(Icons.save),
+          label: const Text('Save settings'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _sendNow,
+          icon: const Icon(Icons.send_to_mobile),
+          label: const Text('Send watchlist to TV now'),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'TV startup contract:\n'
+          'POST /api/v1/tv/online\n'
+          '{"deviceId":"living-room-tv"}',
+        ),
+      ],
+    );
+  }
 }
