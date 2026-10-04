@@ -1,12 +1,26 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'api.dart';
 import 'youtube_embed.dart';
 
 void main()=>runApp(const WatchCueApp());
+
+class WatchCueScrollBehavior extends MaterialScrollBehavior {
+ const WatchCueScrollBehavior();
+
+ @override
+ Set<PointerDeviceKind> get dragDevices => {
+   PointerDeviceKind.touch,
+   PointerDeviceKind.mouse,
+   PointerDeviceKind.trackpad,
+   PointerDeviceKind.stylus,
+   PointerDeviceKind.unknown,
+ };
+}
 class WatchCueApp extends StatelessWidget{
  const WatchCueApp({super.key});
- @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'WatchCue',themeMode:ThemeMode.dark,theme:ThemeData(useMaterial3:true,colorSchemeSeed:Colors.deepPurple,brightness:Brightness.dark),home:const HomePage());
+ @override Widget build(BuildContext context)=>MaterialApp(debugShowCheckedModeBanner:false,title:'WatchCue',scrollBehavior:const WatchCueScrollBehavior(),themeMode:ThemeMode.dark,theme:ThemeData(useMaterial3:true,colorSchemeSeed:Colors.deepPurple,brightness:Brightness.dark),home:const HomePage());
 }
 class HomePage extends StatefulWidget{const HomePage({super.key});@override State<HomePage> createState()=>_HomePageState();}
 class _HomePageState extends State<HomePage>{
