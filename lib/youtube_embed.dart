@@ -8,12 +8,16 @@ class YoutubePlaybackController {
   static void register(html.IFrameElement frame) => _frames.add(frame);
   static void unregister(html.IFrameElement frame) => _frames.remove(frame);
 
-  static void pauseAll() {
+  // Hard reset is intentional. A cross-origin YouTube iframe can ignore
+  // postMessage pause commands while it is still initialising. Reloading the
+  // embed guarantees that audio/video stops before a dialog or action opens.
+  static void stopAll() {
     for (final frame in List<html.IFrameElement>.from(_frames)) {
-      frame.contentWindow?.postMessage(
-        '{"event":"command","func":"pauseVideo","args":""}',
-        'https://www.youtube.com',
-      );
+      final src = frame.src;
+      frame.src = 'about:blank';
+      Future<void>.delayed(const Duration(milliseconds: 40), () {
+        if (_frames.contains(frame)) frame.src = src;
+      });
     }
   }
 }
@@ -29,6 +33,7 @@ class YoutubeEmbed extends StatefulWidget {
 class _YoutubeEmbedState extends State<YoutubeEmbed> {
   late final String _viewType;
   html.IFrameElement? _frame;
+  bool _playing = false;
 
   @override
   void initState() {
@@ -38,10 +43,13 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
       final frame = html.IFrameElement()
         ..src =
-            'https://www.youtube.com/embed/${widget.videoId}?enablejsapi=1&playsinline=1'
+            'https://www.youtube.com/embed/${widget.videoId}?enablejsapi=1&playsinline=1&controls=0'
         ..style.border = '0'
+        // Critical for web/trackpads: the cross-origin iframe otherwise
+        // consumes wheel/trackpad events and Flutter never receives them.
+        ..style.pointerEvents = 'none'
         ..allow =
-            'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+            'autoplay; encrypted-media; picture-in-picture'
         ..allowFullscreen = true;
 
       _frame = frame;
@@ -50,14 +58,23 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
     });
   }
 
+  void _command(String command) {
+    _frame?.contentWindow?.postMessage(
+      '{"event":"command","func":"$command","args":""}',
+      '*',
+    );
+  }
+
+  void _togglePlayback() {
+    setState(() => _playing = !_playing);
+    _command(_playing ? 'playVideo' : 'pauseVideo');
+  }
+
   @override
   void dispose() {
     final frame = _frame;
     if (frame != null) {
-      frame.contentWindow?.postMessage(
-        '{"event":"command","func":"pauseVideo","args":""}',
-        'https://www.youtube.com',
-      );
+      frame.src = 'about:blank';
       YoutubePlaybackController.unregister(frame);
     }
     super.dispose();
@@ -66,6 +83,19 @@ class _YoutubeEmbedState extends State<YoutubeEmbed> {
   @override
   Widget build(BuildContext context) => AspectRatio(
         aspectRatio: 16 / 9,
-        child: HtmlElementView(viewType: _viewType),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            HtmlElementView(viewType: _viewType),
+            Center(
+              child: IconButton.filled(
+                onPressed: _togglePlayback,
+                tooltip: _playing ? 'Pause trailer' : 'Play trailer',
+                iconSize: 42,
+                icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
+              ),
+            ),
+          ],
+        ),
       );
 }
