@@ -11,7 +11,7 @@ class WatchCueApi {
   Future<void> refreshTrailer(String id) async {final r=await http.post(Uri.parse('$baseUrl/watch-items/$id/trailer/refresh'));_ok(r);}
   Future<Map<String,dynamic>> tvSettings() async {final r=await http.get(Uri.parse('$baseUrl/tv/settings'));_ok(r);return jsonDecode(r.body);}
   Future<void> saveTvSettings(Map<String,dynamic> body) async {final r=await http.put(Uri.parse('$baseUrl/tv/settings'),headers:_json,body:jsonEncode(body));_ok(r);}
-  Future<bool> sendTvNow() async {final r=await http.post(Uri.parse('$baseUrl/tv/send-watchlist'));_ok(r);return jsonDecode(r.body)['notificationSent']==true;}
+  Future<bool> sendTvNow() async {final r=await http.post(Uri.parse('$baseUrl/tv/send-watchlist'));_ok(r);return jsonDecode(r.body)['notificationQueued']==true;}
   static const _json={'Content-Type':'application/json'};
   void _ok(http.Response r){if(r.statusCode<200||r.statusCode>=300){throw Exception(r.body.isEmpty?'HTTP ${r.statusCode}':r.body);}}
 }
